@@ -166,12 +166,39 @@ app.post('/move', (request, response) => {
     snake.body.map(part => {
       const {x, y} = part;
       game.setUnwalkable(x, y);
-    })
+    });
   });
+
+  // Can I kill any other snakes?
+  const killTargets = [];
+  snakes.map(snake => {
+    const theirLength = snake.body.length;
+    const myLength = me.body.length;
+
+    if (theirLength < myLength) {
+      killTargets.push(snake);
+    }
+  })
 
   let myTarget = game.getTarget();
 
-  if( turn > 3 && health >= 25 && health < 60) {
+  // If I'm healthy and there are some valid kill targets, let's get 'em
+  let killPaths = [];
+  if(turn > 3 && killTargets.length > 0 && health >= 60) {
+    killPaths = killTargets.map(target => {
+      return game.findPath(headX, headY, target.body[0].x, target.body[0].y).slice(1);
+    }).filter(path => path.length > 0).sort((a,b) => a.length > b.length);
+  }
+
+  if (killPaths.length > 0) {
+    const nextPath = killPaths[0];
+    const lastNode = getCoordsFromArray(nextPath[nextPath.length - 1]);
+    game.setTarget(lastNode.x, lastNode.y);
+
+    // Start tracking the new target
+    myTarget = lastNode;
+  }
+  else if( turn > 3 && health >= 25 && health < 60) {
     // If my target has expired, find a new one
     if (!validFoodTarget(myTarget.x, myTarget.y, food) || !validPathToFood(headX, headY, myTarget.x, myTarget.y, game)) {
       const nextPath = calculateFurthestFoodPath(headX, headY, food);
